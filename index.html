@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>«Пятнашки»</title>
+    <script src="jquery-3.7.0.js"></script>
+    <style>
+        body {
+            background-color: #ffe4e1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .timer {
+            margin-top: 20px;
+            font-size: 24px;
+            color: #db7093;
+        }
+
+        .change-color {
+            margin: 10px;
+            padding: 5px 10px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .puzzle {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-gap: 5px;
+            padding: 10px;
+            background-color: #ffb6c1;
+            border-radius: 10px;
+        }
+
+        .puzzle div {
+            width: 100px;
+            height: 100px;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #db7093;
+            border-radius: 5px;
+        }
+
+        .dark-theme {
+            background-color: #003366;
+        }
+
+        .dark-theme .puzzle {
+            background-color: #336699;
+        }
+
+        .dark-theme .puzzle div {
+            color: #003366;
+        }
+
+        .dark-theme .timer,
+        .dark-theme .change-color {
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="timer">Время: 00:00</div>
+    <button class="change-color">Сменить цвет</button>
+
+    <div class="puzzle">
+        <div id="tile1">1</div>
+        <div id="tile2">2</div>
+        <div id="tile3">3</div>
+        <div id="tile4">4</div>
+        <div id="tile5">5</div>
+        <div id="tile6">6</div>
+        <div id="tile7">7</div>
+        <div id="tile8">8</div>
+        <div id="tile9">9</div>
+        <div id="tile10">10</div>
+        <div id="tile11">11</div>
+        <div id="tile12">12</div>
+        <div id="tile13">13</div>
+        <div id="tile14">14</div>
+        <div id="tile15">15</div>
+        <div id="tile16"></div>
+    </div>
+
+
+    <script>
+        $(document).ready(function () {
+            let isGameStarted = false;
+            let movesCount = 0;
+            let timer = 0;
+            let timerInterval;
+
+            function startTimer() {
+                if (!timerInterval) {
+                    timerInterval = setInterval(function () {
+                        timer++;
+                        let minutes = Math.floor(timer / 60);
+                        let seconds = timer % 60;
+                        $('.timer').text(`Время: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+                    }, 1000);
+                }
+            }
+
+            function shuffleTiles() {
+                let tiles, m, i, t;
+                let solvable = false;
+                do {
+                    tiles = $('.puzzle div').get();
+                    m = tiles.length;
+                    while (m) {
+                        i = Math.floor(Math.random() * m--);
+                        t = tiles[m];
+                        tiles[m] = tiles[i];
+                        tiles[i] = t;
+                    }
+                    solvable = isSolvable(tiles);
+                } while (!solvable);
+
+                $('.puzzle').empty().append(tiles);
+            }
+
+            function isSolvable(tiles) {
+                let inversions = 0;
+                let tileNumbers = Array.from(tiles).map(tile => parseInt(tile.textContent) || 0);
+
+                for (let i = 0; i < tileNumbers.length; i++) {
+                    for (let j = i + 1; j < tileNumbers.length; j++) {
+                        if (tileNumbers[i] && tileNumbers[j] && tileNumbers[i] > tileNumbers[j]) {
+                            inversions++;
+                        }
+                    }
+                }
+                let emptyIndex = tiles.findIndex(tile => tile.textContent === '' || tile.textContent === '16');
+                let emptyRow = Math.floor(emptyIndex / 4) + 1;
+                if (emptyRow % 2 === 0) {
+                    inversions += emptyRow;
+                }
+                return inversions % 2 === 0;
+            }
+
+
+            function swapTiles($tile1, $tile2) {
+                let temp = $tile2.clone(true);
+                $tile2.replaceWith($tile1.clone(true));
+                $tile1.replaceWith(temp);
+            }
+
+            function checkWin() {
+                for (let i = 0; i < 15; i++) {
+                    if ($('.puzzle div').eq(i).text() != i + 1) return false;
+                }
+                return true;
+            }
+
+            function resetGame() {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                timer = 0;
+                movesCount = 0;
+                $('.timer').text('Время: 00:00');
+                isGameStarted = false;
+                shuffleTiles();
+            }
+
+            function makeMove($tile) {
+                if (!isGameStarted) {
+                    isGameStarted = true;
+                    startTimer();
+                }
+
+                let tileIndex = $tile.index();
+                let emptyIndex = $('#tile16').index();
+
+                const isAdjacent = Math.abs(tileIndex - emptyIndex) === 1 || Math.abs(tileIndex - emptyIndex) === 4;
+                if (isAdjacent && !$tile.is('#tile16')) {
+                    swapTiles($tile, $('#tile16'));
+                    movesCount++;
+
+                    if (checkWin()) {
+                        clearInterval(timerInterval);
+                        let minutes = Math.floor(timer / 60);
+                        let seconds = timer % 60;
+                        alert(`Молодец! Ты завершил игру за ${minutes} минут ${seconds} секунд и ${movesCount} ходов. Хочешь сыграть еще раз?`);
+                        resetGame();
+                    }
+                }
+            }
+
+            $('.change-color').click(function () {
+                $('body').toggleClass('dark-theme');
+            });
+
+            $('.puzzle').on('click', 'div', function () {
+                makeMove($(this));
+            });
+
+            shuffleTiles();
+        });
+    </script>
+
+</body>
+
+</html>
